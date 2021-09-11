@@ -74,7 +74,7 @@ NS_ASSUME_NONNULL_BEGIN
 /// 添加扫码view
 /// @param model 配置model
 /// @param result 结果回调 当state != ok的时候  plugin为nil
-+ (void)AddScanViewWithModel:(SQScanPluginConfigModel *)model result:(void (^)(SQScanCodeState state, SQScanView *scanView))result;
++ (void)createScanViewWithModel:(SQScanPluginConfigModel *)model result:(void (^)(SQScanCodeState state, SQScanView *scanView))result;
 
 - (void)reload;
 @end

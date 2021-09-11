@@ -123,7 +123,7 @@
 
 
 
-+ (void)AddScanViewWithModel:(SQScanPluginConfigModel *)model result:(void (^)(SQScanCodeState state, SQScanView *scanView))result {
++ (void)createScanViewWithModel:(SQScanPluginConfigModel *)model result:(void (^)(SQScanCodeState state, SQScanView *scanView))result {
     
     SQScanView *plugin = [[SQScanView alloc] initWithFrame:UIScreen.mainScreen.bounds];
     plugin.userInteractionEnabled = NO;

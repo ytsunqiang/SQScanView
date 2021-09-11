@@ -28,7 +28,7 @@
     model.showReaderBorder = YES;
     model.delegate = self;
     model.type = 2;
-    [SQScanView AddScanViewWithModel:model result:^(SQScanCodeState state, SQScanView * _Nonnull scanView) {
+    [SQScanView createScanViewWithModel:model result:^(SQScanCodeState state, SQScanView * _Nonnull scanView) {
 
         [self.view addSubview:scanView];
         [scanView startScan:YES];
