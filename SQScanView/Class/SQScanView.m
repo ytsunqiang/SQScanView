@@ -16,7 +16,7 @@
         self.previewRect = [UIScreen mainScreen].bounds;
         CGSize size = [UIScreen mainScreen].bounds.size;
         self.readerRect = CGRectMake((size.width - 220) * 0.5, (size.height - 220) * 0.5, 220, 220);
-        self.preset = AVCaptureSessionPreset1920x1080;
+        self.preset = AVCaptureSessionPresetHigh;
     }
     return self;
 }
@@ -48,11 +48,6 @@
 
 
 @property (nonatomic, strong) AVCaptureMetadataOutput *output;
-#pragma mark ---- 识别区域 ----
-@property (nonatomic, assign) CGFloat ReaderWidth;
-@property (nonatomic, assign) CGFloat ReaderHeight;
-@property (nonatomic, assign) CGFloat ReaderLeft;
-@property (nonatomic, assign) CGFloat ReaderTop;
 
 ///遮罩layer
 @property (nonatomic, strong) CAShapeLayer *recLayer;
@@ -125,12 +120,11 @@
 
 + (void)createScanViewWithModel:(SQScanPluginConfigModel *)model result:(void (^)(SQScanCodeState state, SQScanView *scanView))result {
     
-    SQScanView *plugin = [[SQScanView alloc] initWithFrame:UIScreen.mainScreen.bounds];
-    plugin.userInteractionEnabled = NO;
+    SQScanView *plugin = [[SQScanView alloc] initWithFrame:model.previewRect];
     [plugin initPropertyWithModel:model result:^(SQScanCodeState state, SQScanView *view) {
         if (state == SQScanCodeOK) {
             [view loopDrawLine];
-            [view crop];
+//            [view crop];
         }
         result(state, state == SQScanCodeOK ? view : nil);
     }];
@@ -226,7 +220,9 @@ static void soundCompleteCallback(SystemSoundID soundID, void *clientData) {}
                 preview.frame = self.bounds;
                 [self.layer addSublayer:preview];
                 self.qrVideoPreviewLayer = preview;
-                
+                dispatch_async(dispatch_get_main_queue(), ^{
+                    self.readerRect = [self getReaderViewBounds];
+                });
                 self.qrSession = session;
                 if (result) {
                     result(SQScanCodeOK, self);
@@ -275,11 +271,11 @@ static void soundCompleteCallback(SystemSoundID soundID, void *clientData) {}
 ///创建扫码背景,非识别区域添加黑色半透明view
 - (void)loopDrawLine {
     if (self.configModel.showReaderBorder) {
-        self.hbImageView.frame = CGRectMake(self.ReaderLeft, self.ReaderTop, self.ReaderWidth, self.ReaderHeight);
+        self.hbImageView.frame = self.configModel.readerRect;
         if (self.started) {
             [_readLineView.layer removeAllAnimations];
         }
-        self.readLineView.frame = CGRectMake(self.ReaderLeft, self.ReaderTop, self.ReaderWidth, 7);
+        self.readLineView.frame = CGRectMake(self.configModel.readerRect.origin.x, self.configModel.readerRect.origin.y, self.configModel.readerRect.size.width, 7);
         if (self.started) {
             [self startAnimation];
         }
@@ -299,7 +295,10 @@ static void soundCompleteCallback(SystemSoundID soundID, void *clientData) {}
 }
 
 - (void)reload {
-    [self crop];
+//    [self crop];
+    if (!CGRectEqualToRect(self.frame, self.configModel.previewRect)) {    
+        self.frame = self.configModel.previewRect;
+    }
     [self loopDrawLine];
     self.readerRect = [self getReaderViewBounds];
     
@@ -319,7 +318,7 @@ static void soundCompleteCallback(SystemSoundID soundID, void *clientData) {}
     
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.1 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
         
-        CGFloat c_width = self.ReaderHeight - 7;
+        CGFloat c_width = self.configModel.readerRect.size.height - 7;
         CABasicAnimation *scanNetAnimation = [CABasicAnimation animation];
         scanNetAnimation.keyPath = @"transform.translation.y";
         scanNetAnimation.byValue = @(c_width);
@@ -331,11 +330,11 @@ static void soundCompleteCallback(SystemSoundID soundID, void *clientData) {}
 ///添加遮罩
 - (void)addRec {
     //中间镂空的矩形框
-    CGRect myRect = CGRectMake(self.ReaderLeft,self.ReaderTop,self.ReaderWidth, self.ReaderHeight);
+    CGRect myRect = self.configModel.readerRect;
     if (!CGRectEqualToRect(myRect, self.recRect)) {
         self.recRect = myRect;
         //背景
-        UIBezierPath *path = [UIBezierPath bezierPathWithRect:[UIScreen mainScreen].bounds];
+        UIBezierPath *path = [UIBezierPath bezierPathWithRect:self.bounds];
         //镂空
         UIBezierPath *recPath = [UIBezierPath  bezierPathWithRect:myRect];
         [path appendPath:recPath];
@@ -343,31 +342,9 @@ static void soundCompleteCallback(SystemSoundID soundID, void *clientData) {}
         self.recLayer.path = path.CGPath;
     }
 }
-///剪裁显示区域以外
-- (void)crop {
-
-    if (!CGRectEqualToRect(self.previewRect, self.configModel.previewRect)) {
-        
-        self.previewRect = self.configModel.previewRect;
-        
-        UIBezierPath* path = [UIBezierPath bezierPathWithRect:self.configModel.previewRect];
-        
-        CAShapeLayer *maskLayer = [[CAShapeLayer alloc]init];
-        
-        maskLayer.frame = _qrVideoPreviewLayer.bounds;
-        
-        maskLayer.path= path.CGPath;
-        
-        _qrVideoPreviewLayer.mask= maskLayer;
-    }
-}
 //获取识别区域
 - (CGRect)getReaderViewBounds {
-    CGSize size = self.bounds.size;
-    return CGRectMake(self.ReaderTop / size.height,
-            (size.width - self.ReaderLeft - self.ReaderWidth) / size.width,
-            self.ReaderHeight / size.height,
-            self.ReaderWidth / size.width);
+    return [self.qrVideoPreviewLayer metadataOutputRectOfInterestForRect:self.configModel.readerRect];
 }
 
 #pragma mark - AVCaptureMetadataOutputObjectsDelegate
@@ -523,22 +500,6 @@ didOutputMetadataObjects:(NSArray *)metadataObjects
     return _outputTypes;
 }
 
-- (CGFloat)ReaderWidth {
-    return self.configModel.readerRect.size.width;
-}
-
-- (CGFloat)ReaderHeight {
-    return self.configModel.readerRect.size.height;
-}
-
-- (CGFloat)ReaderLeft {
-    return self.configModel.previewRect.origin.x + self.configModel.readerRect.origin.x;
-}
-
-- (CGFloat)ReaderTop {
-    return self.configModel.previewRect.origin.y + self.configModel.readerRect.origin.y;
-}
-
 #pragma mark ----- 获取摄像头权限 -----
 - (void)authCameraWithBlock:(void(^)(BOOL auth))complete {
     
@@ -581,7 +542,7 @@ didOutputMetadataObjects:(NSArray *)metadataObjects
 
 
 - (void)dealloc {
-    NSLog(@"--------==========");
+//    NSLog(@"--------==========");
     [self setFlashlight:NO];
 }
 
@@ -655,8 +616,6 @@ didOutputMetadataObjects:(NSArray *)metadataObjects
     
     CGFloat averX = totalX / corners.count;
     CGFloat averY = totalY / corners.count;
-    
-//    CGFloat minSize = MIN(bounds.size.width , bounds.size.height);
 
     dispatch_async(dispatch_get_main_queue(), ^{
              

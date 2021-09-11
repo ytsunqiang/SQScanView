@@ -48,7 +48,7 @@ NS_ASSUME_NONNULL_BEGIN
 @property (nonatomic, assign) BOOL showReaderBorder;
 ///识别结果代理
 @property (nonatomic, weak) id<SQScanViewPluginDelegate> delegate;
-///相机分辨率 默认1920x1080  reload会闪屏
+///相机分辨率 默认1920x1080  修改后reload会闪屏
 @property (nonatomic, assign) AVCaptureSessionPreset preset;
 
 @end
@@ -71,11 +71,11 @@ NS_ASSUME_NONNULL_BEGIN
 /// @param light 是否开启
 - (void)setFlashlight:(BOOL)light;
 
-/// 添加扫码view
+/// 创建扫码view
 /// @param model 配置model
-/// @param result 结果回调 当state != ok的时候  plugin为nil
+/// @param result 结果回调 当state != ok的时候  scanView为nil
 + (void)createScanViewWithModel:(SQScanPluginConfigModel *)model result:(void (^)(SQScanCodeState state, SQScanView *scanView))result;
-
+//修改model中属性的数据后调用,会刷新扫码页面
 - (void)reload;
 @end
 

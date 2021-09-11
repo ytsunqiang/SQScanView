@@ -21,7 +21,7 @@
     [super viewDidLoad];
     SQScanPluginConfigModel *model = [[SQScanPluginConfigModel alloc] init];
     self.model = model;
-    model.previewRect = CGRectMake(50, 00, 300, 400);
+    model.previewRect = CGRectMake(10, 10, 300, 400);
     model.readerRect = CGRectMake(50, 50, 200, 300);
     model.tipType = SQScanViewTipTypeShake;
     model.mark = YES;
@@ -49,6 +49,7 @@
 
 - (void)changeReader {
     self.model.previewRect = CGRectMake(0, 100, 300, 400);
+    self.model.readerRect = CGRectMake(30, 100, 240, 60);
     [self.scanView reload];
 }
 
